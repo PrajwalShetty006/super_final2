@@ -46,11 +46,8 @@ export const DataProvider = ({ children }) => {
       const data = await apiService.getForecast();
       setForecastData(data);
       return data;
-    } catch (err) {
-      setError(prev => ({
-        ...prev,
-        forecast: 'Failed to fetch forecast data'
-      }));
+    } catch {
+      setError(prev => ({ ...prev, forecast: 'Failed to fetch forecast data' }));
       return null;
     } finally {
       setLoading(prev => ({ ...prev, forecast: false }));
@@ -65,10 +62,7 @@ export const DataProvider = ({ children }) => {
       setRfmData(data);
       return data;
     } catch {
-      setError(prev => ({
-        ...prev,
-        rfm: 'Failed to fetch RFM data'
-      }));
+      setError(prev => ({ ...prev, rfm: 'Failed to fetch RFM data' }));
       return null;
     } finally {
       setLoading(prev => ({ ...prev, rfm: false }));
@@ -83,10 +77,7 @@ export const DataProvider = ({ children }) => {
       setDiscountsData(data);
       return data;
     } catch {
-      setError(prev => ({
-        ...prev,
-        discounts: 'Failed to fetch discounts data'
-      }));
+      setError(prev => ({ ...prev, discounts: 'Failed to fetch discounts data' }));
       return null;
     } finally {
       setLoading(prev => ({ ...prev, discounts: false }));
@@ -100,10 +91,10 @@ export const DataProvider = ({ children }) => {
       const data = await apiService.runAll();
       setRunAllData(data);
       return data;
-    } catch (err) {
+    } catch {
       setError(prev => ({
         ...prev,
-        runAll: 'Backend is waking up (cold start). Please retry.'
+        runAll: 'Backend is waking up (cold start). Please retry.',
       }));
       return null;
     } finally {
@@ -127,6 +118,53 @@ export const DataProvider = ({ children }) => {
     const discounts = runAllData?.discounts || discountsData;
     const rfm = runAllData?.rfm || rfmData;
     return discounts ? transformDiscountsData(discounts, rfm) : [];
-  },
+  }, [discountsData, rfmData, runAllData]);
 
+  const getMetrics = useCallback(() => {
+    const forecast = runAllData?.forecast || forecastData?.forecast;
+    return forecast
+      ? calculateMetricsFromForecast(forecast)
+      : {
+          totalRevenue: 0,
+          avgDailySales: 0,
+          growthRate: 0,
+          totalCustomers: 0,
+        };
+  }, [forecastData, runAllData]);
+
+  /* ================= INITIAL LOAD ================= */
+
+  useEffect(() => {
+    fetchRunAll();
+  }, [fetchRunAll]);
+
+  /* ================= CONTEXT VALUE ================= */
+
+  const value = {
+    forecastData,
+    rfmData,
+    discountsData,
+    runAllData,
+
+    transformedForecast: getTransformedForecast(),
+    transformedSegments: getTransformedSegments(),
+    transformedOffers: getTransformedOffers(),
+    metrics: getMetrics(),
+
+    loading,
+    error,
+
+    fetchForecast,
+    fetchRFM,
+    fetchDiscounts,
+    fetchRunAll,
+    refreshAll: fetchRunAll,
+  };
+
+  return (
+    <DataContext.Provider value={value}>
+      {children}
+    </DataContext.Provider>
+  );
+};
 
